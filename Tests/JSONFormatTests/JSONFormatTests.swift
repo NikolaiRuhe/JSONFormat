@@ -5,6 +5,11 @@ import Foundation
 
 final class JSONFormatTests: XCTestCase {
 
+    override func setUp() {
+        // This is here to warm up the cached data
+        _ = testJSON
+    }
+
     func testSimpleExample() async throws {
         let data = #"{"":[]}"#.data(using: .utf8)!
 
@@ -27,7 +32,7 @@ final class JSONFormatTests: XCTestCase {
         XCTAssertEqual(count, 732458)
     }
 
-    func testMoreSync() {
+    func test_SyncCountLargeFile() {
         testJSON.withUnsafeBytes { (buffer: UnsafeRawBufferPointer) -> Void in
             var iterator = JSONFormatSync(buffer: buffer)
             var count = 1
@@ -43,6 +48,16 @@ fileprivate let jsonURL = Bundle.module.url(forResource: "large-file", withExten
 let testJSON = try! Data(contentsOf: jsonURL)
 
 
-// Results, Mac Studio, Release Build:
-// Test Case '-[JSONFormatTests.JSONFormatTests testAsyncCountLargeFile]' passed (5.857 seconds).
-// Test Case '-[JSONFormatTests.JSONFormatTests testMoreSync]' passed (0.388 seconds).
+// MARK: - Results (Mac Studio, Release Build)
+
+// Xcode 13.4
+// Test Case '-[JSONFormatTests.JSONFormatTests test_SyncCountLargeFile]' passed (0.444 seconds).
+// Test Case '-[JSONFormatTests.JSONFormatTests testAsyncCountLargeFile]' passed (0.521 seconds).
+//
+// Xcode 14 beta 2
+// Test Case '-[JSONFormatTests.JSONFormatTests test_SyncCountLargeFile]' passed (0.390 seconds).
+// Test Case '-[JSONFormatTests.JSONFormatTests testAsyncCountLargeFile]' passed (4.808 seconds).
+//
+// Xcode 14 beta 2, with @_unsafeInheritExecutor
+// Test Case '-[JSONFormatTests.JSONFormatTests test_SyncCountLargeFile]' passed (0.386 seconds).
+// Test Case '-[JSONFormatTests.JSONFormatTests testAsyncCountLargeFile]' passed (0.513 seconds).

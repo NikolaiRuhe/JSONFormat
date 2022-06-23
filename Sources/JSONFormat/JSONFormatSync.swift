@@ -11,12 +11,10 @@ public struct JSONFormatSync: IteratorProtocol {
     let buffer: UnsafeRawBufferPointer
     var cursor: UnsafeRawBufferPointer.Index
     
-    fileprivate var nextCodePoint: CodePoint? {
-        mutating get throws {
-            if cursor == buffer.endIndex { return nil }
-            defer { cursor += 1 }
-            return buffer[cursor]
-        }
+    @inline(__always) fileprivate mutating func nextCodePoint() throws -> CodePoint? {
+        if cursor == buffer.endIndex { return nil }
+        defer { cursor += 1 }
+        return buffer[cursor]
     }
     public mutating func next() -> String? {
         do {
@@ -70,13 +68,13 @@ fileprivate extension JSONFormat {
 
     @inline(__always)
     mutating func readOptional() throws -> CodePoint? {
-        if let putBackChar {
+        if let putBackChar = putBackChar {
             self.putBackChar = nil
             return putBackChar
         }
 
         while true {
-            guard let codePoint = try nextCodePoint else {
+            guard let codePoint = try nextCodePoint() else {
                 return nil
             }
             if codePoint.isWhitespace { continue }

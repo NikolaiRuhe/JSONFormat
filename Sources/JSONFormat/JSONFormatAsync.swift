@@ -1,4 +1,3 @@
-import AsyncAlgorithms
 import Foundation
 
 fileprivate typealias JSONFormat = JSONFormatAsync
@@ -30,7 +29,7 @@ public struct JSONFormatAsync: AsyncIteratorProtocol, AsyncSequence {
     public func makeAsyncIterator() -> JSONFormatAsync { self }
     public mutating func next() async throws -> String? { try await parseNextIndented() }
     fileprivate var input: AsyncBufferedByteIterator
-    fileprivate var nextCodePoint: CodePoint? { @inline(__always) mutating get async throws { try await input.next() } }
+    @inline(__always) /* @_unsafeInheritExecutor */ fileprivate mutating func nextCodePoint() async throws -> CodePoint? { try await input.next() }
     fileprivate var putBackChar: CodePoint? = nil
 
     fileprivate var state = State.initial
@@ -63,7 +62,7 @@ fileprivate extension JSONFormat {
         case error
     }
 
-    @inline(__always)
+    @inline(__always) /* @_unsafeInheritExecutor */
     mutating func read() async throws -> CodePoint {
         guard let codePoint = try await readOptional() else {
             state = .error
@@ -72,15 +71,15 @@ fileprivate extension JSONFormat {
         return codePoint
     }
 
-    @inline(__always)
+    @inline(__always) /* @_unsafeInheritExecutor */
     mutating func readOptional() async throws -> CodePoint? {
-        if let putBackChar {
+        if let putBackChar = putBackChar {
             self.putBackChar = nil
             return putBackChar
         }
 
         while true {
-            guard let codePoint = try await nextCodePoint else {
+            guard let codePoint = try await nextCodePoint() else {
                 return nil
             }
             if codePoint.isWhitespace { continue }
@@ -91,6 +90,7 @@ fileprivate extension JSONFormat {
         }
     }
 
+    /* @_unsafeInheritExecutor */
     mutating func parseNextIndented() async throws -> String? {
         var depth = stack.count
         if let value = try await parseNext() {
@@ -100,6 +100,7 @@ fileprivate extension JSONFormat {
         return nil
     }
 
+    /* @_unsafeInheritExecutor */
     mutating func parseNext() async throws -> String? {
         switch state {
         case .error, .finished: return nil
@@ -110,6 +111,7 @@ fileprivate extension JSONFormat {
         }
     }
 
+    /* @_unsafeInheritExecutor */
     mutating func parseValue() async throws -> String {
         let codePoint = try await read()
         switch codePoint {
@@ -135,7 +137,7 @@ fileprivate extension JSONFormat {
         }
     }
 
-    @inline(__always)
+    @inline(__always) /* @_unsafeInheritExecutor */
     mutating func parseBeginObject() async throws -> String {
         let codePoint = try await read()
         if codePoint == 0x7d {
@@ -148,7 +150,7 @@ fileprivate extension JSONFormat {
         }
     }
 
-    @inline(__always)
+    @inline(__always) /* @_unsafeInheritExecutor */
     mutating func parseEndObject() async throws -> Bool {
         let codePoint = try await read()
         switch codePoint {
@@ -161,6 +163,7 @@ fileprivate extension JSONFormat {
         }
     }
 
+    /* @_unsafeInheritExecutor */
     mutating func parseObjectContents() async throws -> String? {
 
         if try await parseEndObject() {
@@ -192,7 +195,7 @@ fileprivate extension JSONFormat {
         return "\(string): \(element)"
     }
 
-    @inline(__always)
+    @inline(__always) /* @_unsafeInheritExecutor */
     mutating func parseBeginArray() async throws -> String {
         let codePoint = try await read()
         if codePoint == 0x5d {
@@ -205,7 +208,7 @@ fileprivate extension JSONFormat {
         }
     }
 
-    @inline(__always)
+    @inline(__always) /* @_unsafeInheritExecutor */
     mutating func parseEndArray() async throws -> Bool {
         let codePoint = try await read()
         if codePoint == 0x5d {
@@ -215,6 +218,7 @@ fileprivate extension JSONFormat {
         return false
     }
 
+    /* @_unsafeInheritExecutor */
     mutating func parseArrayContents() async throws -> String? {
 
         if try await parseEndArray() {
@@ -243,7 +247,7 @@ fileprivate extension JSONFormat {
         return element
     }
 
-    @inline(__always)
+    @inline(__always) /* @_unsafeInheritExecutor */
     mutating func parseCommaOptional() async throws -> Bool {
         guard let codePoint = try await readOptional() else {
             return false
@@ -257,7 +261,7 @@ fileprivate extension JSONFormat {
         }
     }
 
-    @inline(__always)
+    @inline(__always) /* @_unsafeInheritExecutor */
     mutating func parse(expected: String.UTF8View) async throws {
         for expectedCodePoint in expected {
             let codePoint = try await read()
@@ -267,6 +271,7 @@ fileprivate extension JSONFormat {
         }
     }
 
+    /* @_unsafeInheritExecutor */
     mutating func parseDoubleQuotedString() async throws -> String {
         var utf8: [CodePoint] = [0x22]
         while true {
@@ -289,7 +294,7 @@ fileprivate extension JSONFormat {
         }
     }
 
-    @inline(__always)
+    @inline(__always) /* @_unsafeInheritExecutor */
     mutating func readDigits(into utf8: inout [CodePoint]) async throws {
         while true {
             let codePoint = try await read()
@@ -302,6 +307,7 @@ fileprivate extension JSONFormat {
         }
     }
 
+    /* @_unsafeInheritExecutor */
     mutating func parseNumber(startingWith codePoint: CodePoint) async throws -> String {
         var codePoint = codePoint
         var utf8: [CodePoint] = [codePoint]
